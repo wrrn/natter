@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package tutorial.likes;
+option go_package = "github.com/wrrn/natter/pkg/likes";
+
+import "post.proto";
+
+
+service LikesService {
+    rpc UpdateLikes(UpdateLikesRequest) returns (UpdateLikesResponse){};
+    rpc GetTrending(GetTrendingRequest) returns (GetTrendingResponse){};
+    rpc StreamTrending(GetTrendingRequest) returns (stream GetTrendingResponse){};
+
+};
+
+message UpdateLikesRequest {
+    string uuid = 1;
+    int64 count = 2;
+};
+
+message UpdateLikesResponse{
+    string uuid = 1;
+    int64 total_likes = 2;
+};
+
+
+message GetTrendingRequest {
+    int32 limit = 1;
+};
+
+message GetTrendingResponse {    
+    repeated TrendingPost posts = 1;
+};
+
+message TrendingPost {
+    tutorial.post.Post post = 1;
+    int64 num_likes = 2;
+};
+
+

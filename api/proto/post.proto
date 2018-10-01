@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package tutorial.post;
+option go_package = "github.com/wrrn/natter/pkg/post";
+
+service PostService {
+    rpc CreatePost(CreatePostRequest) returns (CreatePostResponse);
+    rpc ListPosts(ListPostsRequest) returns (ListPostsResponse);
+    rpc BatchGetPosts(BatchGetPostsRequest) returns(BatchGetPostsResponse);
+}
+
+message CreatePostRequest {
+    string msg = 2;
+};
+
+
+message CreatePostResponse {
+    Post post = 1;
+};
+
+message ListPostsRequest {};
+
+message ListPostsResponse {
+    repeated Post posts = 1;
+};
+
+message BatchGetPostsRequest {
+    repeated string uuids = 1;
+};
+
+message BatchGetPostsResponse {
+    repeated Post posts = 1;
+};
+
+message Post {
+    string uuid = 1;
+    string msg = 3;
+};

@@ -1,0 +1,23 @@
+
+¯
+
+post.prototutorial.post"%
+CreatePostRequest
+msg (	Rmsg"=
+CreatePostResponse'
+post (2.tutorial.post.PostRpost"
+ListPostsRequest">
+ListPostsResponse)
+posts (2.tutorial.post.PostRposts",
+BatchGetPostsRequest
+uuids (	Ruuids"B
+BatchGetPostsResponse)
+posts (2.tutorial.post.PostRposts",
+Post
+uuid (	Ruuid
+msg (	Rmsg2Œ
+PostServiceQ
+
+CreatePost .tutorial.post.CreatePostRequest!.tutorial.post.CreatePostResponseN
+	ListPosts.tutorial.post.ListPostsRequest .tutorial.post.ListPostsResponseZ
+BatchGetPosts#.tutorial.post.BatchGetPostsRequest$.tutorial.post.BatchGetPostsResponseB!Zgithub.com/wrrn/natter/pkg/postbproto3

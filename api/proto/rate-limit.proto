@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package ratelimit;
+
+option go_package = "github.com/wrrn/natter/pkg/ratelimit";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/duration.proto";
+
+service RateLimit {
+    rpc SetRateLimit(SetRateLimitRequest) returns (google.protobuf.Empty){};
+};
+
+
+message SetRateLimitRequest {
+    google.protobuf.Duration duration = 1;
+};
+
+
+
+    
+
