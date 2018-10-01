@@ -1,5 +1,9 @@
 .DEFAULT_GOAL := help
 PROTO_FILES := post.proto likes.proto rate-limit.proto
+
+.PHONY:
+build: generate-grpc generate-protoset build-services
+
 .PHONY: generate-grpc
 generate-grpc: ## generate the gRPC code from the protobuf definitions
 	@for proto in $(PROTO_FILES); do \
@@ -16,6 +20,12 @@ generate-protoset:
 			--descriptor_set_out=api/proto/protosets/$${proto}set \
 			--include_imports \
 			$${proto}; \
+	done
+
+.PHONY: build-services
+build-services:
+	@for x in $$(ls cmd); do\
+		go build ./cmd/$${x}; \
 	done
 
 .PHONY: help
