@@ -1,27 +1,62 @@
 package likes
 
-import "sort"
+import (
+	"context"
+	"sort"
+	"sync"
+)
 
-func (s *service) updateLikes(uuid string, count int64) int64 {
+func newCache() *cache {
+	c := &cache{
+		likes:     make(map[string]int64),
+		publisher: newPublisher(100),
+		RWMutex:   &sync.RWMutex{},
+	}
+	go c.publisher.listen()
+	return c
+}
 
-	s.mutex.Lock()
-	totalLikes := s.postLikes[uuid] + count
-	s.postLikes[uuid] = totalLikes
-	s.mutex.Unlock()
+type cache struct {
+	likes     map[string]int64
+	publisher *updatesPublisher
+	*sync.RWMutex
+}
+
+func (c *cache) update(ctx context.Context, uuid string, count int64) int64 {
+
+	c.Lock()
+	totalLikes := c.likes[uuid] + count
+	c.likes[uuid] = totalLikes
+	c.Unlock()
+	c.publisher.notify(ctx, uuid, totalLikes)
 	return totalLikes
 }
 
-func (s *service) getTopLikes(limit int32) []likesCount {
+func (c *cache) onUpdate(ctx context.Context, onUpdate func(uuid string, totalLikes int64) error) error {
+	return c.publisher.subscribe(ctx, onUpdate)
+}
+
+func (c *cache) getTopLikes(limit int32) likesCountList {
 	likes := make([]likesCount, 0, limit)
-	s.mutex.RLock()
-	for postID, numLikes := range s.postLikes {
+	c.RLock()
+	for postID, numLikes := range c.likes {
 		likes = append(likes, likesCount{postID: postID, numLikes: numLikes})
 	}
-	s.mutex.RUnlock()
+	c.RUnlock()
 
 	sort.Slice(likes, func(i, j int) bool {
 		// Do this in reverse so that order is in descending
 		return likes[i].numLikes > likes[j].numLikes
 	})
 	return likes[:limit]
+}
+
+type likesCountList []likesCount
+
+func (ll likesCountList) IDs() []string {
+	ids := make([]string, 0, len(ll))
+	for _, l := range ll {
+		ids = append(ids, l.postID)
+	}
+	return ids
 }

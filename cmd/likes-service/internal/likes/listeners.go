@@ -75,7 +75,7 @@ func (u *updatesPublisher) notify(ctx context.Context, postID string, totalLikes
 	}
 }
 
-func (u *updatesPublisher) subscribe(ctx context.Context, onUpdate func(l likesCount)) error {
+func (u *updatesPublisher) subscribe(ctx context.Context, onUpdate func(uuid string, totalLikes int64) error) error {
 
 	s := subscriber{
 		uuid: uuid.New(),
@@ -83,13 +83,16 @@ func (u *updatesPublisher) subscribe(ctx context.Context, onUpdate func(l likesC
 	}
 
 	u.newSubscriptions <- s
+	defer func() { u.closedSubscriptions <- s }()
+
 	for {
 
 		select {
 		case likes := <-s.c:
-			onUpdate(likes)
+			if err := onUpdate(likes.postID, likes.numLikes); err != nil {
+				return err
+			}
 		case <-ctx.Done():
-			u.closedSubscriptions <- s
 			return ctx.Err()
 		}
 	}

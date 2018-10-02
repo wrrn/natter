@@ -2,8 +2,6 @@ package likes
 
 import (
 	"context"
-	"log"
-	"sync"
 
 	pb "github.com/wrrn/natter/pkg/likes"
 	pb_post "github.com/wrrn/natter/pkg/post"
@@ -11,22 +9,16 @@ import (
 
 func NewService(postsClient pb_post.PostServiceClient) pb.LikesServiceServer {
 	s := &service{
-		postLikes:   make(map[string]int64),
-		publisher:   newPublisher(100),
 		postsClient: postsClient,
-		mutex:       &sync.RWMutex{},
+		cache:       newCache(),
 	}
-	go s.publisher.listen()
-	return s
 
+	return s
 }
 
 type service struct {
-	postLikes   map[string]int64
+	cache       *cache
 	postsClient pb_post.PostServiceClient
-
-	publisher *updatesPublisher
-	mutex     *sync.RWMutex
 }
 
 type likesCount struct {
@@ -35,26 +27,18 @@ type likesCount struct {
 }
 
 func (s *service) UpdateLikes(ctx context.Context, req *pb.UpdateLikesRequest) (*pb.UpdateLikesResponse, error) {
-	log.Println("Updating the likes")
-	defer log.Println("Likes Updated")
-	totalLikes := s.updateLikes(req.Uuid, req.Count)
-	s.publisher.notify(ctx, req.Uuid, totalLikes)
+	totalLikes := s.cache.update(ctx, req.Uuid, req.Count)
 	return &pb.UpdateLikesResponse{Uuid: req.Uuid, TotalLikes: totalLikes}, nil
 }
 
 func (s *service) GetTrending(ctx context.Context, req *pb.GetTrendingRequest) (*pb.GetTrendingResponse, error) {
 	limit := req.Limit
-	if limit > int32(len(s.postLikes)) {
-		limit = int32(len(s.postLikes))
+	if limit > int32(len(s.cache.likes)) {
+		limit = int32(len(s.cache.likes))
 	}
 
-	topLikes := s.getTopLikes(limit)
-	postIDs := make([]string, 0, limit)
-	for _, l := range topLikes {
-		postIDs = append(postIDs, l.postID)
-	}
-
-	resp, err := s.postsClient.BatchGetPosts(ctx, &pb_post.BatchGetPostsRequest{Uuids: postIDs})
+	topLikes := s.cache.getTopLikes(limit)
+	resp, err := s.postsClient.BatchGetPosts(ctx, &pb_post.BatchGetPostsRequest{Uuids: topLikes.IDs()})
 	if err != nil {
 		return nil, err
 	}
@@ -71,16 +55,13 @@ func (s *service) GetTrending(ctx context.Context, req *pb.GetTrendingRequest) (
 }
 
 func (s *service) StreamTrending(req *pb.GetTrendingRequest, stream pb.LikesService_StreamTrendingServer) error {
-	ctx, cancel := context.WithCancel(stream.Context())
-	var err error
-
-	s.publisher.subscribe(ctx, func(l likesCount) {
-		var resp *pb.GetTrendingResponse
-		resp, err = s.GetTrending(ctx, req)
+	ctx := stream.Context()
+	err := s.cache.onUpdate(ctx, func(string, int64) error {
+		resp, err := s.GetTrending(ctx, req)
 		if err != nil {
-			cancel()
+			return err
 		}
-		stream.Send(resp)
+		return stream.Send(resp)
 	})
 
 	return err
