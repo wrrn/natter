@@ -25,7 +25,7 @@ generate-protoset:
 .PHONY: build-services
 build-services:
 	@for x in $$(ls cmd); do\
-		go build ./cmd/$${x}; \
+		go build -i ./cmd/$${x}; \
 	done
 
 .PHONY: help
